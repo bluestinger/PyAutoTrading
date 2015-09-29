@@ -2,13 +2,13 @@
 __author__ = '人在江湖'
 
 import tkinter.messagebox
-import tkinter as tk
-from tkinter import ttk
-import threading
+from tkinter import *
+from tkinter.ttk import *
 import time
 import win32gui
 import win32api
 import datetime
+import threading
 
 import win32con
 import tushare as ts
@@ -17,8 +17,9 @@ TIME = 100
 
 is_start = False
 is_monitor = True
-items_list = []
-trading_messages = []
+items_lst = []
+order_msg = []
+stock_code = ''
 stock_name = ''
 stock_price = ''
 
@@ -111,7 +112,7 @@ def is_click_popup_window(hwnd_parent, button_title):
 def buy(hwnd_parent, stock_code, stock_number):
     virtual_key(hwnd_parent, win32con.VK_F6)  # 必须保证在双向委托界面下才有效
     hwnd_lst = get_last_handlers_lst(hwnd_parent)  # 在买卖前，重新获得句柄
-    if is_click_popup_window(hwnd_parent, None):  # 判断是否是否超时，重新连接
+    if is_click_popup_window(hwnd_parent, None):  # 判断是否超时，重新连接
         time.sleep(5)
     left_mouse_click(hwnd_lst[2])
     input_string(hwnd_lst[2], stock_code)
@@ -136,6 +137,13 @@ def sell(hwnd_parent, stock_code, stock_number):
     return not is_click_popup_window(hwnd_parent, None)
 
 
+def order(hwnd_parent, stock_code, stock_number, trade_direction):
+    if trade_direction == 'B':
+        return buy(hwnd_parent, stock_code, stock_number)
+    if trade_direction == 'S':
+        return sell(hwnd_parent, stock_code, stock_number)
+
+
 def trading_init(trading_program_title):
     # 获取交易软件句柄
     hwnd_parent = win32gui.FindWindow(None, trading_program_title)
@@ -153,171 +161,162 @@ def get_stock_data(stock_code):
     return stock_data
 
 
-def is_digit(str1):
-    # 字符串是否是数字
-    if str1 == '':
-        return False
-    for ch in str1:
-        if not ch.isdigit():
-            if ch != '.':
-                return False
-    return True
-
-
 def monitor():
     # 股价监控函数
-    global stock_name, stock_price, trading_messages
+    global stock_name, stock_price, order_msg
     hwnd_parent = trading_init('网上股票交易系统5.0')
-    sell_times = 1
-    buy_times = 1
+    is_traded = [True] * 4
     # 如果hwnd_parent为零，直接终止循环
     while is_monitor and hwnd_parent:
-        if is_start:
-            if items_list[0] != '':
-                stock_name, stock_price = get_stock_data(items_list[0])
-
-                # 卖出
-                if items_list[3] != '':
-
-                    # stop_loss_sell
-                    if sell_times and (stock_price < items_list[1]):
-                        dt = datetime.datetime.now()
-                        if sell(hwnd_parent, items_list[0], items_list[3]):
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '止损', stock_price,
-                                 items_list[3], '成功'))
-                        else:
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '止损', stock_price,
-                                 items_list[3], '失败'))
-                        sell_times -= 1
-                        time.sleep(1)
-
-                    # stop_profit_sell
-                    if sell_times and (stock_price > items_list[2]):
-                        dt = datetime.datetime.now()
-                        if sell(hwnd_parent, items_list[0], items_list[3]):
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '止盈', stock_price,
-                                 items_list[3], '成功'))
-                        else:
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '止盈', stock_price,
-                                 items_list[3], '失败'))
-                        sell_times -= 1
-                        time.sleep(1)
-
-                # 卖入
-                if items_list[5] != '':
-                    # 突破买入
-                    if buy_times and (stock_price > items_list[4]):
-                        dt = datetime.datetime.now()
-                        if buy(hwnd_parent, items_list[0], items_list[5]):
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '突破买入', stock_price,
-                                 items_list[5], '成功'))
-                        else:
-                            trading_messages.append(
-                                (dt.strftime('%x'), dt.strftime('%X'), items_list[0], stock_name, '突破买入', stock_price,
-                                 items_list[5], '失败'))
-                        buy_times -= 1
-                        time.sleep(1)
+        if is_start and stock_code:
+            stock_name, stock_price = get_stock_data(stock_code)
+            if stock_name != '' and stock_price > 0:
+                index = 0
+                for relationship, setting_price, direction, number in items_lst:
+                    if is_traded[index] and relationship and direction and \
+                                    setting_price != 0 and number != '0':
+                        if relationship == '>' and stock_price > setting_price:
+                            dt = datetime.datetime.now()
+                            if order(hwnd_parent, stock_code, number, direction):
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '成功'))
+                            else:
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '失败'))
+                            is_traded[index] = False
+                        if relationship == '<' and stock_price < setting_price:
+                            dt = datetime.datetime.now()
+                            if order(hwnd_parent, stock_code, number, direction):
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '成功'))
+                            else:
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '失败'))
+                            is_traded[index] = False
+                    index += 1
         time.sleep(3)
 
 
 class StockGui:
     def __init__(self):
-        self.window = tk.Tk()
+        self.window = Tk()
         self.window.title("股票交易伴侣")
 
         # self.window.geometry("800x600+300+300")
         self.window.resizable(0, 0)
 
         # 股票信息
-        frame1 = tk.Frame(self.window)
-        frame1.pack(side=tk.LEFT, padx=10, pady=10)
+        frame = Frame(self.window)
+        frame.pack(side=LEFT, padx=10, pady=10)
 
-        label_frame0 = tk.LabelFrame(frame1, text="股票")
-        label_frame0.pack(side=tk.TOP, padx=5)
+        sub_frame1 = Frame(frame)
+        sub_frame1.pack(padx=5, pady=5)
 
-        tk.Label(label_frame0, text="股票代码", width=10).grid(
-            row=1, column=1, sticky=tk.W)
-        tk.Label(label_frame0, text="股票名称", width=10).grid(
-            row=2, column=1, sticky=tk.W)
-        tk.Label(label_frame0, text="当前价格", width=10).grid(
-            row=3, column=1, sticky=tk.W)
-        self.stock_code = tk.StringVar()
-        self.stock_code_entry = tk.Entry(label_frame0, textvariable=self.stock_code, width=10,
-                                         justify=tk.RIGHT)
-        self.stock_code_entry.grid(row=1, column=2)
-        self.stock_name_label = tk.Label(
-            label_frame0, width=10, bg="yellow", justify=tk.RIGHT)
-        self.stock_name_label.grid(row=2, column=2)
-        self.stock_price_label = tk.Label(
-            label_frame0, width=10, bg="yellow", justify=tk.RIGHT)
-        self.stock_price_label.grid(row=3, column=2)
+        Label(sub_frame1, text="股票代码", width=8).grid(
+            row=1, column=1, padx=5, pady=5, sticky=W)
+        Label(sub_frame1, text="股票名称", width=8).grid(
+            row=1, column=2, padx=5, pady=5, sticky=W)
+        Label(sub_frame1, text="当前价格", width=8).grid(
+            row=1, column=3, padx=5, pady=5, sticky=W)
+        self.stock_code = StringVar()
+        self.stock_code_entry = Entry(sub_frame1, textvariable=self.stock_code, width=6)
+        self.stock_code_entry.grid(row=2, column=1, padx=5, pady=5, sticky=W)
+        self.stock_name_label = Label(
+            sub_frame1, width=8)
+        self.stock_name_label.grid(row=2, column=2, padx=5, pady=5, sticky=W)
+        self.stock_price_label = Label(
+            sub_frame1, width=8)
+        self.stock_price_label.grid(row=2, column=3, padx=5, pady=5, sticky=W)
 
-        # 卖出
-        label_frame1 = tk.LabelFrame(frame1, text="卖出")
-        label_frame1.pack(side=tk.TOP, padx=5)
-        tk.Label(label_frame1, text="止损价格", width=10, fg="blue").grid(
-            row=1, column=1, sticky=tk.W)
-        tk.Label(label_frame1, text="止盈价格", width=10, fg="blue").grid(
-            row=2, column=1, sticky=tk.W)
-        tk.Label(label_frame1, text="卖出数量", width=10, fg="blue").grid(
-            row=3, column=1, sticky=tk.W)
-        self.stop_loss_price = tk.StringVar()
-        self.stop_loss_price_entry = tk.Entry(label_frame1, textvariable=self.stop_loss_price, width=10,
-                                              justify=tk.RIGHT)
-        self.stop_loss_price_entry.grid(row=1, column=2)
+        sub_frame2 = Frame(frame)
+        sub_frame2.pack(padx=5, pady=5)
+        Label(sub_frame2, text="关系", width=5).grid(
+            row=1, column=1, padx=5, pady=5, sticky=W)
+        Label(sub_frame2, text="价格", width=5).grid(
+            row=1, column=2, padx=5, pady=5, sticky=W)
+        Label(sub_frame2, text="方向", width=5).grid(
+            row=1, column=3, padx=5, pady=5, sticky=W)
+        Label(sub_frame2, text="数量", width=5).grid(
+            row=1, column=4, padx=5, pady=5, sticky=W)
 
-        self.stop_profit_price = tk.StringVar()
-        self.stop_profit_price_entry = tk.Entry(label_frame1, textvariable=self.stop_profit_price, width=10,
-                                                justify=tk.RIGHT)
-        self.stop_profit_price_entry.grid(row=2, column=2)
+        self.lst = []
+        for row in range(4):
+            self.lst.append([])
+            for col in range(4):
+                temp = StringVar()
+                self.lst[row].append(temp)
 
-        self.sell_stock_number = tk.StringVar()
-        self.sell_stock_number_entry = tk.Entry(label_frame1, textvariable=self.sell_stock_number, width=10,
-                                                justify=tk.RIGHT)
-        self.sell_stock_number_entry.grid(row=3, column=2)
+        Combobox(sub_frame2, values=('<', '>'), textvariable=self.lst[0][0], width=2).grid(row=2, column=1, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=1000, textvariable=self.lst[0][1], increment=0.01, width=6).grid(row=2,
+                                                                                                         column=2,
+                                                                                                         padx=5, pady=5)
+        Combobox(sub_frame2, values=('B', 'S'), textvariable=self.lst[0][2], width=2).grid(row=2, column=3, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=100000, textvariable=self.lst[0][3], increment=100, width=8).grid(row=2,
+                                                                                                          column=4,
+                                                                                                          padx=5,
+                                                                                                          pady=5)
+        Combobox(sub_frame2, values=('<', '>'), textvariable=self.lst[1][0], width=2).grid(row=3, column=1, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=1000, textvariable=self.lst[1][1], increment=0.01, width=6).grid(row=3,
+                                                                                                         column=2,
+                                                                                                         padx=5, pady=5)
+        Combobox(sub_frame2, values=('B', 'S'), textvariable=self.lst[1][2], width=2).grid(row=3, column=3, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=100000, textvariable=self.lst[1][3], increment=100, width=8).grid(row=3,
+                                                                                                          column=4,
+                                                                                                          padx=5,
+                                                                                                          pady=5)
 
-        # 买入
-        label_frame2 = tk.LabelFrame(frame1, text="买入")
-        label_frame2.pack(side=tk.TOP, padx=5)
-        tk.Label(label_frame2, text="突破价格", width=10, fg="red").grid(
-            row=1, column=1, sticky=tk.W)
-        tk.Label(label_frame2, text="买入数量", width=10, fg="red").grid(
-            row=2, column=1, sticky=tk.W)
+        Combobox(sub_frame2, values=('<', '>'), textvariable=self.lst[2][0], width=2).grid(row=4, column=1, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=1000, textvariable=self.lst[2][1], increment=0.01, width=6).grid(row=4,
+                                                                                                         column=2,
+                                                                                                         padx=5, pady=5)
+        Combobox(sub_frame2, values=('B', 'S'), textvariable=self.lst[2][2], width=2).grid(row=4, column=3, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=100000, textvariable=self.lst[2][3], increment=100, width=8).grid(row=4,
+                                                                                                          column=4,
+                                                                                                          padx=5,
+                                                                                                          pady=5)
 
-        self.buy_stock_price = tk.StringVar()
-        self.buy_stock_price_entry = tk.Entry(label_frame2, textvariable=self.buy_stock_price, width=10,
-                                              justify=tk.RIGHT)
-        self.buy_stock_price_entry.grid(row=1, column=2)
+        Combobox(sub_frame2, values=('<', '>'), textvariable=self.lst[3][0], width=2).grid(row=5, column=1, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=1000, textvariable=self.lst[3][1], increment=0.01, width=6).grid(row=5,
+                                                                                                         column=2,
+                                                                                                         padx=5, pady=5)
+        Combobox(sub_frame2, values=('B', 'S'), textvariable=self.lst[3][2], width=2).grid(row=5, column=3, padx=5,
+                                                                                           pady=5)
+        Spinbox(sub_frame2, from_=0, to=100000, textvariable=self.lst[3][3], increment=100, width=8).grid(row=5,
+                                                                                                          column=4,
+                                                                                                          padx=5,
+                                                                                                          pady=5)
 
-        self.buy_stock_number = tk.StringVar()
-        self.buy_stock_number_entry = tk.Entry(label_frame2, textvariable=self.buy_stock_number, width=10,
-                                               justify=tk.RIGHT)
-        self.buy_stock_number_entry.grid(row=2, column=2)
-        # 委托
-        frame2 = tk.LabelFrame(self.window, text='委托日志')
-        frame2.pack(side=tk.LEFT, padx=10, pady=10)
-        scrollbar = ttk.Scrollbar(frame2)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # 日志
+        frame2 = Frame(self.window)
+        frame2.pack(side=LEFT, padx=10, pady=10)
+        scrollbar = Scrollbar(frame2)
+        scrollbar.pack(side=RIGHT, fill=Y)
         col_name = ['日期', '时间', '证券代码', '证券名称', '操作', '价格', '数量', '备注']
-        self.tree = ttk.Treeview(frame2, show='headings', columns=col_name, yscrollcommand=scrollbar.set)
+        self.tree = Treeview(frame2, show='headings', height=10, columns=col_name, yscrollcommand=scrollbar.set)
         self.tree.pack()
         scrollbar.config(command=self.tree.yview)
-
         for name in col_name:
             self.tree.heading(name, text=name)
-            self.tree.column(name, width=70, anchor=tk.E)
+            self.tree.column(name, width=70, anchor=CENTER)
+        #
         # 按钮
-        frame3 = tk.LabelFrame(self.window)
-        frame3.pack(side=tk.LEFT, padx=10, pady=10)
-        self.start_bt = ttk.Button(
+        frame3 = Frame(self.window)
+        frame3.pack(side=LEFT, padx=10, pady=10)
+        self.start_bt = Button(
             frame3, text="启动", command=self.start_stop)
         self.start_bt.pack()
-        ttk.Button(frame3, text='刷新', command=self.refresh_table).pack()
+        Button(frame3, text='刷新', command=self.refresh_table).pack()
         self.count = 0
 
         self.window.protocol(name="WM_DELETE_WINDOW", func=self.close)
@@ -327,9 +326,9 @@ class StockGui:
 
     def refresh_table(self):
         # 刷新机器人委托日志
-        length = len(trading_messages)
+        length = len(order_msg)
         while self.count < length:
-            self.tree.insert('', 0, values=trading_messages[self.count])
+            self.tree.insert('', 0, values=order_msg[self.count])
             self.count += 1
 
     def update_labels(self):
@@ -348,10 +347,9 @@ class StockGui:
 
         if is_start:
             self.get_items()
+            # print(items_lst)
             self.start_bt['text'] = '停止'
-            self.disable_widget()
         else:
-            self.enable_widget()
             self.start_bt['text'] = '启动'
 
     def close(self):
@@ -360,68 +358,24 @@ class StockGui:
         is_monitor = False
         self.window.quit()
 
-    def enable_widget(self):
-        self.stock_code_entry['state'] = tk.NORMAL
-        self.stop_loss_price_entry['state'] = tk.NORMAL
-        self.stop_profit_price_entry['state'] = tk.NORMAL
-        self.sell_stock_number_entry['state'] = tk.NORMAL
-        self.buy_stock_price_entry['state'] = tk.NORMAL
-        self.buy_stock_number_entry['state'] = tk.NORMAL
-
-    def disable_widget(self):
-        self.stock_code_entry['state'] = tk.DISABLED
-        self.stop_loss_price_entry['state'] = tk.DISABLED
-        self.stop_profit_price_entry['state'] = tk.DISABLED
-        self.sell_stock_number_entry['state'] = tk.DISABLED
-        self.buy_stock_price_entry['state'] = tk.DISABLED
-        self.buy_stock_number_entry['state'] = tk.DISABLED
-
     def get_items(self):
-        global items_list
+        global items_lst, stock_code
 
-        items_list = []
+        items_lst = []
 
-        # 股票代码
+        # 获取股票代码
         stock_code = self.stock_code.get().strip()
-        if stock_code.isdigit() and len(stock_code) == 6:
-            items_list.append(stock_code)
-        else:
-            items_list.append('')
 
-        # 止损价格
-        stock_loss_price = self.stop_loss_price.get().strip()
-        if is_digit(stock_loss_price):
-            items_list.append(float(stock_loss_price))
-        else:
-            items_list.append(0)
-
-        # 不写止盈价，默认为10000止盈
-        stop_profit_price = self.stop_profit_price.get().strip()
-        if is_digit(stop_profit_price):
-            items_list.append(float(stop_profit_price))
-        else:
-            items_list.append(10000)
-
-        # 卖出股票数量
-        sell_stock_number = self.sell_stock_number.get().strip()
-        if sell_stock_number.isdigit():
-            items_list.append(sell_stock_number)
-        else:
-            items_list.append('')
-
-        # 不写突破买入价，默认突破10000时买入
-        buy_stock_price = self.buy_stock_price.get().strip()
-        if is_digit(buy_stock_price):
-            items_list.append(float(buy_stock_price))
-        else:
-            items_list.append(10000)
-
-        # 买入股票数量
-        buy_stock_price = self.buy_stock_number.get().strip()
-        if buy_stock_price.isdigit():
-            items_list.append(buy_stock_price)
-        else:
-            items_list.append('')
+        # 获取买卖价格数量等
+        for row in range(4):
+            items_lst.append([])
+            for col in range(4):
+                temp = self.lst[row][col].get().strip()
+                # 把价格列转换浮点数
+                if col == 1:
+                    items_lst[row].append(float(temp))
+                else:
+                    items_lst[row].append(temp)
 
 
 if __name__ == '__main__':
