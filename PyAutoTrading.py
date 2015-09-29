@@ -13,11 +13,12 @@ import threading
 import win32con
 import tushare as ts
 
-TIME = 100
+TIME = 0.1
 
 is_start = False
 is_monitor = True
 items_lst = []
+items_time_lst = []
 order_msg = []
 stock_code = ''
 stock_name = ''
@@ -115,6 +116,7 @@ def buy(hwnd_parent, stock_code, stock_number):
     if is_click_popup_window(hwnd_parent, None):  # 判断是否超时，重新连接
         time.sleep(5)
     left_mouse_click(hwnd_lst[2])
+    time.sleep(2)
     input_string(hwnd_lst[2], stock_code)
     left_mouse_click(hwnd_lst[7])
     input_string(hwnd_lst[7], stock_number)
@@ -129,6 +131,7 @@ def sell(hwnd_parent, stock_code, stock_number):
     if is_click_popup_window(hwnd_parent, None):
         time.sleep(5)
     left_mouse_click(hwnd_lst[11])
+    time.sleep(2)
     input_string(hwnd_lst[11], stock_code)
     left_mouse_click(hwnd_lst[16])
     input_string(hwnd_lst[16], stock_number)
@@ -159,22 +162,25 @@ def get_stock_data(stock_code):
     except:
         tkinter.messagebox.showerror('错误', '股票代码错误或网络不稳定，请按确认及停止按钮，检查后重新开始')
         time.sleep(3)
-        return '错误', -1
+        return '数据错误', -1
+
 
 def monitor():
     # 股价监控函数
     global stock_name, stock_price, order_msg
     hwnd_parent = trading_init('网上股票交易系统5.0')
-    is_traded = [True] * 4
+    is_traded_first = [True] * 4
+    is_traded_second = [True] * 2
     # 如果hwnd_parent为零，直接终止循环
     while is_monitor and hwnd_parent:
         if is_start and stock_code:
             stock_name, stock_price = get_stock_data(stock_code)
             # print(stock_name, stock_price)
             if stock_name != '' and stock_price >= 0:
-                index = 0
+                # 关系条件单
+                index_first = 0
                 for relationship, setting_price, direction, number in items_lst:
-                    if is_traded[index] and relationship and direction and \
+                    if is_traded_first[index_first] and relationship and direction and \
                                     setting_price != 0 and number != '0':
                         if relationship == '>' and stock_price > setting_price:
                             dt = datetime.datetime.now()
@@ -186,7 +192,7 @@ def monitor():
                                 order_msg.append(
                                     (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
                                      stock_price, number, '失败'))
-                            is_traded[index] = False
+                            is_traded_first[index_first] = False
                         if relationship == '<' and stock_price < setting_price:
                             dt = datetime.datetime.now()
                             if order(hwnd_parent, stock_code, number, direction):
@@ -197,8 +203,28 @@ def monitor():
                                 order_msg.append(
                                     (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
                                      stock_price, number, '失败'))
-                            is_traded[index] = False
-                    index += 1
+                            is_traded_first[index_first] = False
+                    index_first += 1
+                # 时间条件单
+                index_second = 0
+                for order_time, direction, number in items_time_lst:
+                    if is_traded_second[index_second] and order_time and direction and number != '0':
+                        print('hello')
+                        dt = datetime.datetime.now()
+                        dt_time = dt.time()
+                        setting_time = datetime.datetime.strptime(order_time, '%H:%M:%S').time()
+                        if dt_time > setting_time:
+                            print(dt, setting_time)
+                            if order(hwnd_parent, stock_code, number, direction):
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '成功'))
+                            else:
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), stock_code, stock_name, direction,
+                                     stock_price, number, '失败'))
+                            is_traded_second[index_second] = False
+                    index_second += 1
         time.sleep(3)
 
 
@@ -298,6 +324,35 @@ class StockGui:
                                                                                                           column=4,
                                                                                                           padx=5,
                                                                                                           pady=5)
+        # 时间条件单
+        sub_frame3 = Frame(frame)
+        sub_frame3.pack(padx=5, pady=5)
+
+        Label(sub_frame3, text='19:5:54', width=7).grid(row=1, column=1, padx=5, pady=5)
+        Label(sub_frame3, text="方向", width=5).grid(row=1, column=2, padx=5, pady=5)
+        Label(sub_frame3, text="数量", width=5).grid(row=1, column=3, padx=5, pady=5)
+
+        self.time_lst = []
+        for row in range(2):
+            self.time_lst.append([])
+            for col in range(3):
+                temp = StringVar()
+                self.time_lst[row].append(temp)
+
+        Entry(sub_frame3, textvariable=self.time_lst[0][0], width=7).grid(row=2, column=1, padx=5, pady=5)
+        Combobox(sub_frame3, values=('B', 'S'), textvariable=self.time_lst[0][1], width=2).grid(row=2, column=2, padx=5,
+                                                                                                pady=5)
+        Spinbox(sub_frame3, from_=0, to=100000, textvariable=self.time_lst[0][2], increment=100, width=8).grid(row=2,
+                                                                                                               column=3,
+                                                                                                               padx=5,
+                                                                                                               pady=5)
+        Entry(sub_frame3, textvariable=self.time_lst[1][0], width=7).grid(row=3, column=1, padx=5, pady=5)
+        Combobox(sub_frame3, values=('B', 'S'), textvariable=self.time_lst[1][1], width=2).grid(row=3, column=2, padx=5,
+                                                                                                pady=5)
+        Spinbox(sub_frame3, from_=0, to=100000, textvariable=self.time_lst[1][2], increment=100, width=8).grid(row=3,
+                                                                                                               column=3,
+                                                                                                               padx=5,
+                                                                                                               pady=5)
 
         # 日志
         frame2 = Frame(self.window)
@@ -349,7 +404,7 @@ class StockGui:
 
         if is_start:
             self.get_items()
-            # print(items_lst)
+            print(items_time_lst)
             self.start_bt['text'] = '停止'
         else:
             self.start_bt['text'] = '开始'
@@ -361,9 +416,10 @@ class StockGui:
         self.window.quit()
 
     def get_items(self):
-        global items_lst, stock_code
+        global items_lst, stock_code, items_time_lst
 
         items_lst = []
+        items_time_lst = []
 
         # 获取股票代码
         stock_code = self.stock_code.get().strip()
@@ -378,6 +434,13 @@ class StockGui:
                     items_lst[row].append(float(temp))
                 else:
                     items_lst[row].append(temp)
+
+        # 获取时间条件单item
+        for row in range(2):
+            items_time_lst.append([])
+            for col in range(3):
+                temp = self.time_lst[row][col].get().strip()
+                items_time_lst[row].append(temp)
 
 
 if __name__ == '__main__':
