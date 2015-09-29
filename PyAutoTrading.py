@@ -78,22 +78,22 @@ def get_last_handlers_lst(hwnd_parent):
 def left_mouse_click(hwnd):
     # 鼠标左键点击
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, None, None)
-    win32api.Sleep(TIME)
+    time.sleep(TIME)
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONUP, None, None)
-    win32api.Sleep(TIME)
+    time.sleep(TIME)
 
 
 def virtual_key(hwnd_parent, key_code):
     win32gui.PostMessage(hwnd_parent, win32con.WM_KEYDOWN, key_code, 0)  # 消息键盘
-    win32api.Sleep(TIME)
+    time.sleep(TIME)
     win32gui.PostMessage(hwnd_parent, win32con.WM_KEYUP, key_code, 0)
-    win32api.Sleep(TIME)
+    time.sleep(TIME)
 
 
 def input_string(hwnd_edit, string):
     # EDIT控件中输入字符串
     win32api.SendMessage(hwnd_edit, win32con.WM_SETTEXT, None, string)
-    win32api.Sleep(TIME)
+    time.sleep(TIME)
 
 
 def is_click_popup_window(hwnd_parent, button_title):
@@ -153,13 +153,13 @@ def trading_init(trading_program_title):
 
 
 def get_stock_data(stock_code):
-    stock_data = []
-    df = ts.get_realtime_quotes(stock_code)
-    # print(df)
-    stock_data.append(df['name'][0])
-    stock_data.append(float(df['price'][0]))
-    return stock_data
-
+    try:
+        df = ts.get_realtime_quotes(stock_code)
+        return df['name'][0], float(df['price'][0])
+    except:
+        tkinter.messagebox.showerror('错误', '股票代码错误或网络不稳定，请按确认及停止按钮，检查后重新开始')
+        time.sleep(3)
+        return '错误', -1
 
 def monitor():
     # 股价监控函数
@@ -170,7 +170,8 @@ def monitor():
     while is_monitor and hwnd_parent:
         if is_start and stock_code:
             stock_name, stock_price = get_stock_data(stock_code)
-            if stock_name != '' and stock_price > 0:
+            # print(stock_name, stock_price)
+            if stock_name != '' and stock_price >= 0:
                 index = 0
                 for relationship, setting_price, direction, number in items_lst:
                     if is_traded[index] and relationship and direction and \
@@ -216,20 +217,21 @@ class StockGui:
         sub_frame1 = Frame(frame)
         sub_frame1.pack(padx=5, pady=5)
 
-        Label(sub_frame1, text="股票代码", width=8).grid(
+        style = Style()
+        style.configure("BW.TLabel", foreground="black", background="red")
+
+        Label(sub_frame1, text="股票代码", width=7).grid(
             row=1, column=1, padx=5, pady=5, sticky=W)
-        Label(sub_frame1, text="股票名称", width=8).grid(
+        Label(sub_frame1, text="股票名称", width=7).grid(
             row=1, column=2, padx=5, pady=5, sticky=W)
-        Label(sub_frame1, text="当前价格", width=8).grid(
+        Label(sub_frame1, text="当前价格", width=7).grid(
             row=1, column=3, padx=5, pady=5, sticky=W)
         self.stock_code = StringVar()
-        self.stock_code_entry = Entry(sub_frame1, textvariable=self.stock_code, width=6)
+        self.stock_code_entry = Entry(sub_frame1, textvariable=self.stock_code, width=7)
         self.stock_code_entry.grid(row=2, column=1, padx=5, pady=5, sticky=W)
-        self.stock_name_label = Label(
-            sub_frame1, width=8)
+        self.stock_name_label = Label(sub_frame1, width=7, style='BW.TLabel')
         self.stock_name_label.grid(row=2, column=2, padx=5, pady=5, sticky=W)
-        self.stock_price_label = Label(
-            sub_frame1, width=8)
+        self.stock_price_label = Label(sub_frame1, width=7, style='BW.TLabel')
         self.stock_price_label.grid(row=2, column=3, padx=5, pady=5, sticky=W)
 
         sub_frame2 = Frame(frame)
@@ -302,7 +304,7 @@ class StockGui:
         frame2.pack(side=LEFT, padx=10, pady=10)
         scrollbar = Scrollbar(frame2)
         scrollbar.pack(side=RIGHT, fill=Y)
-        col_name = ['日期', '时间', '证券代码', '证券名称', '操作', '价格', '数量', '备注']
+        col_name = ['日期', '时间', '证券代码', '证券名称', '方向', '价格', '数量', '备注']
         self.tree = Treeview(frame2, show='headings', height=10, columns=col_name, yscrollcommand=scrollbar.set)
         self.tree.pack()
         scrollbar.config(command=self.tree.yview)
@@ -314,7 +316,7 @@ class StockGui:
         frame3 = Frame(self.window)
         frame3.pack(side=LEFT, padx=10, pady=10)
         self.start_bt = Button(
-            frame3, text="启动", command=self.start_stop)
+            frame3, text="开始", command=self.start_stop)
         self.start_bt.pack()
         Button(frame3, text='刷新', command=self.refresh_table).pack()
         self.count = 0
@@ -350,7 +352,7 @@ class StockGui:
             # print(items_lst)
             self.start_bt['text'] = '停止'
         else:
-            self.start_bt['text'] = '启动'
+            self.start_bt['text'] = '开始'
 
     def close(self):
         # 关闭软件时，停止monitor线程
