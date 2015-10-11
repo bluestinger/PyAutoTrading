@@ -25,8 +25,7 @@ def findSpecifiedTopWindow(wantedText=None, wantedClass=None):
 
 
 def findPopupWindow(hwnd):
-    if hwnd:
-        return win32gui.GetWindow(hwnd, win32con.GW_ENABLEDPOPUP)
+    return win32gui.GetWindow(hwnd, win32con.GW_ENABLEDPOPUP)
 
 
 def findTopWindow(wantedText=None, wantedClass=None, selectionFunction=None):
@@ -291,11 +290,11 @@ def clickButton(hwnd):
 
     Parameters
     ----------
-    hwnd    
+    hwnd
         Window handle of the required button.
 
     Usage example::
-        
+
         okButton = findControl(fontDialog,
                                wantedClass="Button",
                                wantedText="OK")
@@ -309,6 +308,7 @@ def click(hwnd):
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, None, None)
     time.sleep(.2)
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONUP, None, None)
+    time.sleep(.2)
 
 
 def focusWindow(hwnd):
@@ -320,6 +320,7 @@ def pressKey(hwnd, key_code):
     win32gui.PostMessage(hwnd, win32con.WM_KEYDOWN, key_code, 0)  # 消息键盘
     time.sleep(.2)
     win32gui.PostMessage(hwnd, win32con.WM_KEYUP, key_code, 0)
+    time.sleep(.2)
 
 
 
@@ -328,7 +329,7 @@ def clickStatic(hwnd):
 
     Parameters
     ----------
-    hwnd    
+    hwnd
         Window handle of the required static.
 
     Usage example:  TODO
@@ -341,7 +342,7 @@ def doubleClickStatic(hwnd):
 
     Parameters
     ----------
-    hwnd    
+    hwnd
         Window handle of the required static.
 
     Usage example:  TODO
@@ -349,19 +350,6 @@ def doubleClickStatic(hwnd):
     _sendNotifyMessage(hwnd, win32con.STN_DBLCLK)
 
 
-# def highlightWindow(hwnd):
-#     left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-#     windowDc = win32gui.GetWindowDC(hwnd)
-#     if windowDc:
-#         prevPen = win32gui.SelectObject(windowDc, self.rectanglePen)
-#         prevBrush = win32gui.SelectObject(windowDc, win32gui.GetStockObject(win32con.HOLLOW_BRUSH))
-#
-#         win32gui.Rectangle(windowDc, 0, 0, right - left, bottom - top)
-#         win32gui.SelectObject(windowDc, prevPen)
-#         win32gui.SelectObject(windowDc, prevBrush)
-#         win32gui.ReleaseDC(hwnd, windowDc)
-
-#
 # def getEditText(hwnd):
 #     bufLen = win32gui.SendMessage(hwnd, win32con.WM_GETTEXTLENGTH, 0, 0) + 1
 #     print(bufLen)
@@ -371,72 +359,69 @@ def doubleClickStatic(hwnd):
 #     text = buffer[:bufLen]
 #     return text
 
+def setEditText(hwnd, text):
+    win32gui.SendMessage(hwnd, win32con.WM_SETTEXT, None, text)
 
+# def setEditText(hwnd, text, append=False):
+#     '''Set an edit control's text.
+#
+#     Parameters
+#     ----------
+#     hwnd
+#         The edit control's hwnd.
+#     text
+#         The text to send to the control. This can be a single
+#         string, or a sequence of strings. If the latter, each will
+#         be become a a seperate line in the control.
+#     append
+#         Should the new text be appended to the existing text?
+#         Defaults to False, meaning that any existing text will be
+#         replaced. If True, the new text will be appended to the end
+#         of the existing text.
+#         Note that the first line of the new text will be directly
+#         appended to the end of the last line of the existing text.
+#         If appending lines of text, you may wish to pass in an
+#         empty string as the 1st element of the 'text' argument.
+#
+#     Usage example::
+#
+#         print "Enter various bits of text."
+#         setEditText(editArea, "Hello, again!")
+#         time.sleep(.5)
+#         setEditText(editArea, "You still there?")
+#         time.sleep(.5)
+#         setEditText(editArea, ["Here come", "two lines!"])
+#         time.sleep(.5)
+#
+#         print "Add some..."
+#         setEditText(editArea, ["", "And a 3rd one!"], append=True)
+#         time.sleep(.5)
+#     '''
 
-# def getEditText(hwnd):
-#     pass
-
-
-def setEditText(hwnd, text, append=False):
-    '''Set an edit control's text.
-    
-    Parameters
-    ----------
-    hwnd            
-        The edit control's hwnd.
-    text            
-        The text to send to the control. This can be a single
-        string, or a sequence of strings. If the latter, each will
-        be become a a seperate line in the control.
-    append          
-        Should the new text be appended to the existing text?
-        Defaults to False, meaning that any existing text will be
-        replaced. If True, the new text will be appended to the end
-        of the existing text.
-        Note that the first line of the new text will be directly
-        appended to the end of the last line of the existing text.
-        If appending lines of text, you may wish to pass in an
-        empty string as the 1st element of the 'text' argument.
-
-    Usage example::
-        
-        print "Enter various bits of text."
-        setEditText(editArea, "Hello, again!")
-        time.sleep(.5)
-        setEditText(editArea, "You still there?")
-        time.sleep(.5)
-        setEditText(editArea, ["Here come", "two lines!"])
-        time.sleep(.5)
-                    
-        print "Add some..."
-        setEditText(editArea, ["", "And a 3rd one!"], append=True)
-        time.sleep(.5)
-    '''
-
-    # Ensure that text is a list        
-    try:
-        text + ''
-        text = [text]
-    except TypeError:
-        pass
-
-    # Set the current selection range, depending on append flag
-    if append:
-        win32gui.SendMessage(hwnd,
-                             win32con.EM_SETSEL,
-                             -1,
-                             0)
-    else:
-        win32gui.SendMessage(hwnd,
-                             win32con.EM_SETSEL,
-                             0,
-                             -1)
-
-    # Send the text
-    win32gui.SendMessage(hwnd,
-                         win32con.EM_REPLACESEL,
-                         True,
-                         os.linesep.join(text))
+    # Ensure that text is a list
+    # try:
+    #     text + ''
+    #     text = [text]
+    # except TypeError:
+    #     pass
+    #
+    # # Set the current selection range, depending on append flag
+    # if append:
+    #     win32gui.SendMessage(hwnd,
+    #                          win32con.EM_SETSEL,
+    #                          -1,
+    #                          0)
+    # else:
+    #     win32gui.SendMessage(hwnd,
+    #                          win32con.EM_SETSEL,
+    #                          0,
+    #                          -1)
+    #
+    # # Send the text
+    # win32gui.SendMessage(hwnd,
+    #                      win32con.EM_REPLACESEL,
+    #                      True,
+    #                      os.linesep.join(text))
 
 
 def _windowEnumerationHandler(hwnd, resultList):

@@ -11,13 +11,15 @@ import datetime
 import threading
 import tushare as ts
 from winguiauto import *
+import pickle
 
 is_start = False
 is_monitor = True
 set_stock_info = []
 order_msg = []
 actual_stock_info = []
-is_activated = [1] * 4
+is_activated = [1] * 4  # 1：准备  0：交易成功 -1：交易失败
+# display_msg_point = 0
 
 
 def findWantedControls(hwnd):
@@ -36,7 +38,7 @@ def closePopupWindow(hwnd, wantedText=None, wantedClass=None):
     if hwndPopup:
         hwndControl = findControl(hwndPopup, wantedText, wantedClass)
         clickButton(hwndControl)
-        time.sleep(.5)
+        time.sleep(1)
         return True
     return False
 
@@ -44,7 +46,6 @@ def closePopupWindow(hwnd, wantedText=None, wantedClass=None):
 def buy(hwnd, stock_code, stock_number):
     pressKey(hwnd, win32con.VK_F6)
     hwndControls = findWantedControls(hwnd)
-    # print(hwndControls)
     if closePopupWindow(hwnd, wantedClass='Button'):
         time.sleep(5)
     click(hwndControls[0])
@@ -56,14 +57,13 @@ def buy(hwnd, stock_code, stock_number):
     setEditText(hwndControls[5], stock_number)
     time.sleep(.5)
     clickButton(hwndControls[6])
-    time.sleep(.5)
+    time.sleep(1)
     return not closePopupWindow(hwnd, wantedClass='Button')
 
 
 def sell(hwnd, stock_code, stock_number):
     pressKey(hwnd, win32con.VK_F6)
     hwndControls = findWantedControls(hwnd)
-    # print(hwndControls)
     if closePopupWindow(hwnd, wantedClass='Button'):
         time.sleep(5)
     click(hwndControls[7])
@@ -75,7 +75,7 @@ def sell(hwnd, stock_code, stock_number):
     setEditText(hwndControls[12], stock_number)
     time.sleep(.5)
     clickButton(hwndControls[13])
-    time.sleep(.5)
+    time.sleep(1)
     return not closePopupWindow(hwnd, wantedClass='Button')
 
 
@@ -105,7 +105,7 @@ def getStockData(items_info):
         for i in range(len(df)):
             code_name_price.append((df['code'][i], df['name'][i], float(df['price'][i])))
     except:
-        code_name_price = [('', '', 0)] * len(items_info)
+        return code_name_price
     return code_name_price
 
 
@@ -116,43 +116,43 @@ def monitor():
     hwnd = tradingInit()
     # 如果hwnd为零，直接终止循环
     while is_monitor and hwnd:
+        time.sleep(3)
         if is_start:
             actual_stock_info = getStockData(set_stock_info)
             for actual_code, actual_name, actual_price in actual_stock_info:
                 for row, (set_code, set_relation, set_price, set_direction, set_quantity, set_time) in enumerate(set_stock_info):
-                    system_time = datetime.datetime.now().time()
-                    if system_time >= set_time:
-                        if is_activated[row] == 1 and actual_code is set_code and \
-                                set_relation and set_direction and set_price > 0 and set_quantity is not '':
-                            if set_relation == '>' and actual_price > set_price:
-                                dt = datetime.datetime.now()
-                                if order(hwnd, set_code, set_quantity, set_direction):
-                                    order_msg.append(
-                                        (dt.strftime('%x'), dt.strftime('%X'), actual_code,
-                                         actual_name, set_direction,
-                                         actual_price, set_quantity, '成功'))
-                                    is_activated[row] = 0
-                                else:
-                                    order_msg.append(
-                                        (dt.strftime('%x'), dt.strftime('%X'), actual_code,
-                                         actual_name, set_direction,
-                                         actual_price, set_quantity, '失败'))
-                                    is_activated[row] = -1
-                            if set_relation == '<' and actual_price < set_price:
-                                dt = datetime.datetime.now()
-                                if order(hwnd, set_code, set_quantity, set_direction):
-                                    order_msg.append(
-                                        (dt.strftime('%x'), dt.strftime('%X'), actual_code,
-                                         actual_name, set_direction,
-                                         actual_price, set_quantity, '成功'))
-                                    is_activated[row] = 0
-                                else:
-                                    order_msg.append(
-                                        (dt.strftime('%x'), dt.strftime('%X'), actual_code,
-                                         actual_name, set_direction,
-                                         actual_price, set_quantity, '失败'))
-                                    is_activated[row] = -1
-        time.sleep(3)
+                    if actual_code == set_code and actual_code and set_code \
+                            and is_activated[row] == 1 and set_relation \
+                            and set_direction and set_quantity and set_price > 0 \
+                            and datetime.datetime.now().time() > set_time:
+                        if set_relation == '>' and actual_price > set_price:
+                            dt = datetime.datetime.now()
+                            if order(hwnd, set_code, set_quantity, set_direction):
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), actual_code,
+                                     actual_name, set_direction,
+                                     actual_price, set_quantity, '成功'))
+                                is_activated[row] = 0
+                            else:
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), actual_code,
+                                     actual_name, set_direction,
+                                     actual_price, set_quantity, '失败'))
+                                is_activated[row] = -1
+                        if set_relation == '<' and actual_price < set_price:
+                            dt = datetime.datetime.now()
+                            if order(hwnd, set_code, set_quantity, set_direction):
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), actual_code,
+                                     actual_name, set_direction,
+                                     actual_price, set_quantity, '成功'))
+                                is_activated[row] = 0
+                            else:
+                                order_msg.append(
+                                    (dt.strftime('%x'), dt.strftime('%X'), actual_code,
+                                     actual_name, set_direction,
+                                     actual_price, set_quantity, '失败'))
+                                is_activated[row] = -1
 
 
 class StockGui:
@@ -161,7 +161,7 @@ class StockGui:
         self.window.title("股票交易伴侣")
 
         # self.window.geometry("800x600+300+300")
-        # self.window.resizable(0, 0)
+        self.window.resizable(0, 0)
 
         # 股票信息
         frame1 = Frame(self.window)
@@ -172,7 +172,6 @@ class StockGui:
 
         self.rows = 4
         self.cols = 9
-        self.display_message_count = 0
 
         self.variable = []
         for row in range(self.rows):
@@ -195,7 +194,7 @@ class StockGui:
             row=1, column=6, padx=5, pady=5, sticky=W)
         Label(frame1, text="数量", width=5).grid(
             row=1, column=7, padx=5, pady=5, sticky=W)
-        Label(frame1, text="时间", width=8).grid(
+        Label(frame1, text="时间可选", width=8).grid(
             row=1, column=8, padx=5, pady=5, sticky=W)
         Label(frame1, text="状态", width=4).grid(
             row=1, column=9, padx=5, pady=5, sticky=W)
@@ -277,20 +276,6 @@ class StockGui:
               width=4).grid(row=5, column=9, padx=5, pady=5)
 
 
-        # 日志
-        frame2 = Frame(self.window)
-        frame2.pack(padx=10, pady=10)
-        scrollbar = Scrollbar(frame2)
-        scrollbar.pack(side=RIGHT, fill=Y)
-        col_name = ['日期', '时间', '证券代码', '证券名称', '方向', '价格', '数量', '备注']
-        self.tree = Treeview(
-            frame2, show='headings', height=6, columns=col_name, yscrollcommand=scrollbar.set)
-        self.tree.pack()
-        scrollbar.config(command=self.tree.yview)
-        for name in col_name:
-            self.tree.heading(name, text=name)
-            self.tree.column(name, width=70, anchor=CENTER)
-
         # 按钮
         frame3 = Frame(self.window)
         frame3.pack(padx=10, pady=10)
@@ -298,8 +283,8 @@ class StockGui:
         self.start_bt.pack(side=LEFT)
         self.set_bt = Button(frame3, text='重置买卖', command=self.setFlags)
         self.set_bt.pack(side=LEFT)
-        self.save_bt = Button(frame3, text='保存', command=self.save)
-        self.save_bt.pack(side=LEFT)
+        Button(frame3, text="历史记录", command=self.displayHisRecords).pack(side=LEFT)
+        Button(frame3, text='保存', command=self.save).pack(side=LEFT)
         self.load_bt = Button(frame3, text='载入', command=self.load)
         self.load_bt.pack(side=LEFT)
 
@@ -308,11 +293,52 @@ class StockGui:
 
         self.window.mainloop()
 
+    def displayHisRecords(self):
+        global order_msg
+        tp = Toplevel()
+        tp.title('历史记录')
+        tp.resizable(0, 1)
+        scrollbar = Scrollbar(tp)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        col_name = ['日期', '时间', '证券代码', '证券名称', '方向', '价格', '数量', '备注']
+        tree = Treeview(
+            tp, show='headings', columns=col_name, height=30, yscrollcommand=scrollbar.set)
+        tree.pack(expand=1, fill=Y)
+        scrollbar.config(command=tree.yview)
+        for name in col_name:
+            tree.heading(name, text=name)
+            tree.column(name, width=70, anchor=CENTER)
+
+        for msg in order_msg:
+            tree.insert('', 0, values=msg)
+
+
     def save(self):
-        pass
+        global set_stock_info, order_msg
+        with open('stockInfo.dat', 'wb') as fp:
+            pickle.dump(set_stock_info, fp)
+            pickle.dump(order_msg, fp)
 
     def load(self):
-        pass
+        global set_stock_info, order_msg
+        with open('stockInfo.dat', 'rb') as fp:
+            set_stock_info = pickle.load(fp)
+            order_msg = pickle.load(fp)
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if col == 0:
+                    self.variable[row][col].set(set_stock_info[row][0])
+                elif col == 3:
+                    self.variable[row][col].set(set_stock_info[row][1])
+                elif col == 4:
+                    self.variable[row][col].set(set_stock_info[row][2])
+                elif col == 5:
+                    self.variable[row][col].set(set_stock_info[row][3])
+                elif col == 6:
+                    self.variable[row][col].set(set_stock_info[row][4])
+                elif col == 7:
+                    self.variable[row][col].set(set_stock_info[row][5].strftime('%X'))
+
 
     def setFlags(self):
         # 重置买卖标志
@@ -321,12 +347,13 @@ class StockGui:
             is_activated = [1] * 4
 
     def updateControls(self):
-        global set_stock_info, actual_stock_info, order_msg, is_start
+        global set_stock_info, actual_stock_info, is_start
         if is_start:
             # 刷新标签
+
             for row, (set_code, _, _, _, _, _) in enumerate(set_stock_info):
                 for actual_code, actual_name, actual_price in actual_stock_info:
-                    if actual_code is set_code:
+                    if actual_code == set_code and actual_code and set_code:
                         self.variable[row][1].set(actual_name)
                         self.variable[row][2].set(str(actual_price))
                         if is_activated[row] == 1:
@@ -335,12 +362,6 @@ class StockGui:
                             self.variable[row][8].set('失败')
                         elif is_activated[row] == 0:
                             self.variable[row][8].set('成功')
-
-            # 刷新日志
-            length = len(order_msg)
-            if self.display_message_count < length:
-                self.tree.insert('', 0, values=order_msg[self.display_message_count])
-                self.display_message_count += 1
 
         self.window.after(3000, self.updateControls)
 
@@ -357,12 +378,10 @@ class StockGui:
             print(set_stock_info)
             self.start_bt['text'] = '停止'
             self.set_bt['state'] = DISABLED
-            self.save_bt['state'] = DISABLED
             self.load_bt['state'] = DISABLED
         else:
             self.start_bt['text'] = '开始'
             self.set_bt['state'] = NORMAL
-            self.save_bt['state'] = NORMAL
             self.load_bt['state'] = NORMAL
 
 
@@ -403,7 +422,7 @@ class StockGui:
                         set_stock_info[row].append('')
                 elif col == 6:
                     if temp.isdigit() and int(temp) >= 100:
-                        set_stock_info[row].append(temp)
+                        set_stock_info[row].append(str(int(temp) // 100 * 100))
                     else:
                         set_stock_info[row].append('')
                 elif col == 7:
