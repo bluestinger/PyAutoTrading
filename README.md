@@ -22,8 +22,8 @@
 * v 0.08 代码清理，添加了注释。现在可以同时监控5只股票。
 
 
-================================================
-![](https://github.com/drongh/ImageCache/raw/master/Logo/setting1.png)
-![](https://github.com/drongh/ImageCache/raw/master/Logo/setting2.png)
-![](https://github.com/drongh/ImageCache/raw/master/Logo/setting3.png)
-![](https://github.com/drongh/ImageCache/raw/master/Logo/trading.png)
+-----------------------------------
+![](https://github.com/drongh/ImageCache/raw/master/Logo/setting1.gif)
+![](https://github.com/drongh/ImageCache/raw/master/Logo/setting2.gif)
+![](https://github.com/drongh/ImageCache/raw/master/Logo/setting3.gif)
+![](https://github.com/drongh/ImageCache/raw/master/Logo/trading.gif)
