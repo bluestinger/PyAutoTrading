@@ -18,8 +18,7 @@ is_monitor = True
 set_stock_info = []
 order_msg = []
 actual_stock_info = []
-is_activated = [1] * 4  # 1：准备  0：交易成功 -1：交易失败
-# display_msg_point = 0
+is_activated = [1] * 5  # 1：准备  0：交易成功 -1：交易失败
 
 
 def findWantedControls(hwnd):
@@ -106,6 +105,7 @@ def getStockData(items_info):
             code_name_price.append((df['code'][i], df['name'][i], float(df['price'][i])))
     except:
         return code_name_price
+    # print(code_name_price)
     return code_name_price
 
 
@@ -120,7 +120,8 @@ def monitor():
         if is_start:
             actual_stock_info = getStockData(set_stock_info)
             for actual_code, actual_name, actual_price in actual_stock_info:
-                for row, (set_code, set_relation, set_price, set_direction, set_quantity, set_time) in enumerate(set_stock_info):
+                for row, (set_code, set_relation, set_price, set_direction, set_quantity, set_time) in enumerate(
+                        set_stock_info):
                     if actual_code == set_code and actual_code and set_code \
                             and is_activated[row] == 1 and set_relation \
                             and set_direction and set_quantity and set_price > 0 \
@@ -159,18 +160,31 @@ class StockGui:
     def __init__(self):
         self.window = Tk()
         self.window.title("股票交易伴侣")
-
-        # self.window.geometry("800x600+300+300")
         self.window.resizable(0, 0)
 
-        # 股票信息
         frame1 = Frame(self.window)
         frame1.pack(padx=10, pady=10)
 
-        # style = Style()
-        # style.configure("BW.TLabel", background="red")
+        Label(frame1, text="股票代码", width=8, justify=CENTER).grid(
+            row=1, column=1, padx=5, pady=5)
+        Label(frame1, text="股票名称", width=8, justify=CENTER).grid(
+            row=1, column=2, padx=5, pady=5)
+        Label(frame1, text="当前价格", width=8, justify=CENTER).grid(
+            row=1, column=3, padx=5, pady=5)
+        Label(frame1, text="关系", width=4, justify=CENTER).grid(
+            row=1, column=4, padx=5, pady=5)
+        Label(frame1, text="价格", width=8, justify=CENTER).grid(
+            row=1, column=5, padx=5, pady=5)
+        Label(frame1, text="方向", width=4, justify=CENTER).grid(
+            row=1, column=6, padx=5, pady=5)
+        Label(frame1, text="数量", width=8, justify=CENTER).grid(
+            row=1, column=7, padx=5, pady=5)
+        Label(frame1, text="时间可选", width=8, justify=CENTER).grid(
+            row=1, column=8, padx=5, pady=5)
+        Label(frame1, text="状态", width=4, justify=CENTER).grid(
+            row=1, column=9, padx=5, pady=5)
 
-        self.rows = 4
+        self.rows = 5
         self.cols = 9
 
         self.variable = []
@@ -180,103 +194,26 @@ class StockGui:
                 temp = StringVar()
                 self.variable[row].append(temp)
 
-        Label(frame1, text="股票代码", width=8).grid(
-            row=1, column=1, padx=5, pady=5, sticky=W)
-        Label(frame1, text="股票名称", width=8).grid(
-            row=1, column=2, padx=5, pady=5, sticky=W)
-        Label(frame1, text="当前价格", width=8).grid(
-            row=1, column=3, padx=5, pady=5, sticky=W)
-        Label(frame1, text="关系", width=5).grid(
-            row=1, column=4, padx=5, pady=5, sticky=W)
-        Label(frame1, text="价格", width=5).grid(
-            row=1, column=5, padx=5, pady=5, sticky=W)
-        Label(frame1, text="方向", width=5).grid(
-            row=1, column=6, padx=5, pady=5, sticky=W)
-        Label(frame1, text="数量", width=5).grid(
-            row=1, column=7, padx=5, pady=5, sticky=W)
-        Label(frame1, text="时间可选", width=8).grid(
-            row=1, column=8, padx=5, pady=5, sticky=W)
-        Label(frame1, text="状态", width=4).grid(
-            row=1, column=9, padx=5, pady=5, sticky=W)
+        for row in range(self.rows):
+            Entry(frame1, textvariable=self.variable[row][0],
+                  width=8).grid(row=row + 2, column=1, padx=5, pady=5)
+            Entry(frame1, textvariable=self.variable[row][1], state=DISABLED,
+                  width=8).grid(row=row + 2, column=2, padx=5, pady=5)
+            Entry(frame1, textvariable=self.variable[row][2], state=DISABLED,
+                  width=8).grid(row=row + 2, column=3, padx=5, pady=5)
+            Combobox(frame1, values=('<', '>'), textvariable=self.variable[row][3],
+                    width=2).grid(row=row + 2, column=4, padx=5, pady=5)
+            Spinbox(frame1, from_=0, to=1000, textvariable=self.variable[row][4],
+                    increment=0.01, width=6).grid(row=row + 2, column=5, padx=5, pady=5)
+            Combobox(frame1, values=('B', 'S'), textvariable=self.variable[row][5],
+                     width=2).grid(row=row + 2, column=6, padx=5, pady=5)
+            Spinbox(frame1, from_=0, to=100000, textvariable=self.variable[row][6],
+                    increment=100, width=6).grid(row=row + 2, column=7, padx=5, pady=5)
+            Entry(frame1, textvariable=self.variable[row][7],
+                  width=8).grid(row=row + 2, column=8, padx=5, pady=5)
+            Entry(frame1, textvariable=self.variable[row][8], state=DISABLED,
+                  width=4).grid(row=row + 2, column=9, padx=5, pady=5)
 
-        Entry(frame1, textvariable=self.variable[0][0],
-              width=8).grid(row=2, column=1, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[0][1], state=DISABLED,
-              width=8).grid(row=2, column=2, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[0][2], state=DISABLED,
-              width=8).grid(row=2, column=3, padx=5, pady=5)
-        Combobox(frame1, values=('<', '>'), textvariable=self.variable[0][3],
-                 width=2).grid(row=2, column=4, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=1000, textvariable=self.variable[0][4],
-                increment=0.01, width=6).grid(row=2, column=5, padx=5, pady=5)
-        Combobox(frame1, values=('B', 'S'), textvariable=self.variable[0][5],
-                 width=2).grid(row=2, column=6, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=100000, textvariable=self.variable[0][6],
-                increment=100, width=8).grid(row=2, column=7, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[0][7],
-              width=8).grid(row=2, column=8, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[0][8], state=DISABLED,
-              width=4).grid(row=2, column=9, padx=5, pady=5)
-
-        Entry(frame1, textvariable=self.variable[1][0],
-              width=8).grid(row=3, column=1, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[1][1], state=DISABLED,
-              width=8).grid(row=3, column=2, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[1][2], state=DISABLED,
-              width=8).grid(row=3, column=3, padx=5, pady=5)
-        Combobox(frame1, values=('<', '>'), textvariable=self.variable[1][3],
-                 width=2).grid(row=3, column=4, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=1000, textvariable=self.variable[1][4],
-                increment=0.01, width=6).grid(row=3, column=5, padx=5, pady=5)
-        Combobox(frame1, values=('B', 'S'), textvariable=self.variable[1][5],
-                 width=2).grid(row=3, column=6, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=100000, textvariable=self.variable[1][6],
-                increment=100, width=8).grid(row=3, column=7, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[1][7],
-              width=8).grid(row=3, column=8, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[1][8], state=DISABLED,
-              width=4).grid(row=3, column=9, padx=5, pady=5)
-
-        Entry(frame1, textvariable=self.variable[2][0],
-              width=8).grid(row=4, column=1, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[2][1], state=DISABLED,
-              width=8).grid(row=4, column=2, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[2][2], state=DISABLED,
-              width=8).grid(row=4, column=3, padx=5, pady=5)
-        Combobox(frame1, values=('<', '>'), textvariable=self.variable[2][3],
-                 width=2).grid(row=4, column=4, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=1000, textvariable=self.variable[2][4],
-                increment=0.01, width=6).grid(row=4, column=5, padx=5, pady=5)
-        Combobox(frame1, values=('B', 'S'), textvariable=self.variable[2][5],
-                 width=2).grid(row=4, column=6, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=100000, textvariable=self.variable[2][6],
-                increment=100, width=8).grid(row=4, column=7, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[2][7],
-              width=8).grid(row=4, column=8, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[2][8], state=DISABLED,
-              width=4).grid(row=4, column=9, padx=5, pady=5)
-
-        Entry(frame1, textvariable=self.variable[3][0],
-              width=8).grid(row=5, column=1, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[3][1], state=DISABLED,
-              width=8).grid(row=5, column=2, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[3][2], state=DISABLED,
-              width=8).grid(row=5, column=3, padx=5, pady=5)
-        Combobox(frame1, values=('<', '>'), textvariable=self.variable[3][3],
-                 width=2).grid(row=5, column=4, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=1000, textvariable=self.variable[3][4],
-                increment=0.01, width=6).grid(row=5, column=5, padx=5, pady=5)
-        Combobox(frame1, values=('B', 'S'), textvariable=self.variable[3][5],
-                 width=2).grid(row=5, column=6, padx=5, pady=5)
-        Spinbox(frame1, from_=0, to=100000, textvariable=self.variable[3][6],
-                increment=100, width=8).grid(row=5, column=7, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[3][7],
-              width=8).grid(row=5, column=8, padx=5, pady=5)
-        Entry(frame1, textvariable=self.variable[3][8], state=DISABLED,
-              width=4).grid(row=5, column=9, padx=5, pady=5)
-
-
-        # 按钮
         frame3 = Frame(self.window)
         frame3.pack(padx=10, pady=10)
         self.start_bt = Button(frame3, text="开始", command=self.start)
@@ -290,10 +227,13 @@ class StockGui:
 
         self.window.protocol(name="WM_DELETE_WINDOW", func=self.close)
         self.window.after(100, self.updateControls)
-
         self.window.mainloop()
 
     def displayHisRecords(self):
+        '''
+        显示历史信息
+        :return:
+        '''
         global order_msg
         tp = Toplevel()
         tp.title('历史记录')
@@ -312,22 +252,35 @@ class StockGui:
         for msg in order_msg:
             tree.insert('', 0, values=msg)
 
-
     def save(self):
-        global set_stock_info, order_msg
+        '''
+        保存设置
+        :return:
+        '''
+        global set_stock_info, order_msg, actual_stock_info
         with open('stockInfo.dat', 'wb') as fp:
             pickle.dump(set_stock_info, fp)
+            pickle.dump(actual_stock_info, fp)
             pickle.dump(order_msg, fp)
 
     def load(self):
-        global set_stock_info, order_msg
+        '''
+        载入设置
+        :return:
+        '''
+        global set_stock_info, order_msg, actual_stock_info
         with open('stockInfo.dat', 'rb') as fp:
             set_stock_info = pickle.load(fp)
+            actual_stock_info = pickle.load(fp)
             order_msg = pickle.load(fp)
         for row in range(self.rows):
             for col in range(self.cols):
                 if col == 0:
                     self.variable[row][col].set(set_stock_info[row][0])
+                elif col == 1:
+                    self.variable[row][col].set(actual_stock_info[row][1])
+                elif col == 2:
+                    self.variable[row][col].set(actual_stock_info[row][2])
                 elif col == 3:
                     self.variable[row][col].set(set_stock_info[row][1])
                 elif col == 4:
@@ -339,7 +292,6 @@ class StockGui:
                 elif col == 7:
                     self.variable[row][col].set(set_stock_info[row][5].strftime('%X'))
 
-
     def setFlags(self):
         # 重置买卖标志
         global is_start, is_activated
@@ -347,9 +299,12 @@ class StockGui:
             is_activated = [1] * 4
 
     def updateControls(self):
+        '''
+        实时股票名称、价格、状态信息
+        :return:
+        '''
         global set_stock_info, actual_stock_info, is_start
         if is_start:
-            # 刷新标签
 
             for row, (set_code, _, _, _, _, _) in enumerate(set_stock_info):
                 for actual_code, actual_name, actual_price in actual_stock_info:
@@ -357,7 +312,7 @@ class StockGui:
                         self.variable[row][1].set(actual_name)
                         self.variable[row][2].set(str(actual_price))
                         if is_activated[row] == 1:
-                            self.variable[row][8].set('准备')
+                            self.variable[row][8].set('监控')
                         elif is_activated[row] == -1:
                             self.variable[row][8].set('失败')
                         elif is_activated[row] == 0:
@@ -375,7 +330,7 @@ class StockGui:
 
         if is_start:
             self.getItems()
-            print(set_stock_info)
+            # print(set_stock_info)
             self.start_bt['text'] = '停止'
             self.set_bt['state'] = DISABLED
             self.load_bt['state'] = DISABLED
@@ -383,7 +338,6 @@ class StockGui:
             self.start_bt['text'] = '开始'
             self.set_bt['state'] = NORMAL
             self.load_bt['state'] = NORMAL
-
 
     def close(self):
         # 关闭软件时，停止monitor线程
