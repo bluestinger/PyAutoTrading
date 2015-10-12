@@ -47,15 +47,15 @@ def buy(hwnd, stock_code, stock_number):
     hwndControls = findWantedControls(hwnd)
     if closePopupWindow(hwnd, wantedClass='Button'):
         time.sleep(5)
-    click(hwndControls[0])
+    click(hwndControls[2])
     time.sleep(.5)
-    setEditText(hwndControls[0], stock_code)
+    setEditText(hwndControls[2], stock_code)
     time.sleep(.5)
-    click(hwndControls[5])
+    click(hwndControls[7])
     time.sleep(.5)
-    setEditText(hwndControls[5], stock_number)
+    setEditText(hwndControls[7], stock_number)
     time.sleep(.5)
-    clickButton(hwndControls[6])
+    clickButton(hwndControls[8])
     time.sleep(1)
     return not closePopupWindow(hwnd, wantedClass='Button')
 
@@ -65,15 +65,15 @@ def sell(hwnd, stock_code, stock_number):
     hwndControls = findWantedControls(hwnd)
     if closePopupWindow(hwnd, wantedClass='Button'):
         time.sleep(5)
-    click(hwndControls[7])
+    click(hwndControls[11])
     time.sleep(.5)
-    setEditText(hwndControls[7], stock_code)
+    setEditText(hwndControls[11], stock_code)
     time.sleep(.5)
-    click(hwndControls[12])
+    click(hwndControls[16])
     time.sleep(.5)
-    setEditText(hwndControls[12], stock_number)
+    setEditText(hwndControls[16], stock_number)
     time.sleep(.5)
-    clickButton(hwndControls[13])
+    clickButton(hwndControls[17])
     time.sleep(1)
     return not closePopupWindow(hwnd, wantedClass='Button')
 
@@ -104,7 +104,7 @@ def getStockData(items_info):
         for i in range(len(df)):
             code_name_price.append((df['code'][i], df['name'][i], float(df['price'][i])))
     except:
-        return code_name_price
+        return []
     # print(code_name_price)
     return code_name_price
 
@@ -296,7 +296,7 @@ class StockGui:
         # 重置买卖标志
         global is_start, is_activated
         if is_start is False:
-            is_activated = [1] * 4
+            is_activated = [1] * 5
 
     def updateControls(self):
         '''
