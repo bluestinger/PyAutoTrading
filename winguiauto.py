@@ -21,10 +21,19 @@ import win32con
 
 
 def findSpecifiedTopWindow(wantedText=None, wantedClass=None):
+    '''
+    :param wantedText: 标题名字
+    :param wantedClass: 窗口类名
+    :return: 返回顶层窗口的句柄
+    '''
     return win32gui.FindWindow(wantedClass, wantedText)
 
 
 def findPopupWindow(hwnd):
+    '''
+    :param hwnd: 父窗口句柄
+    :return: 返回弹出式窗口的句柄
+    '''
     return win32gui.GetWindow(hwnd, win32con.GW_ENABLEDPOPUP)
 
 
@@ -110,7 +119,12 @@ def findTopWindows(wantedText=None, wantedClass=None, selectionFunction=None):
 
 
 def dumpSpecifiedWindow(hwnd, wantedText=None, wantedClass=None):
-    # 查找父窗口下class_name的所有句柄，加为列表
+    '''
+    :param hwnd: 父窗口句柄
+    :param wantedText: 指定子窗口名
+    :param wantedClass: 指定子窗口类名
+    :return: 返回父窗口下所有子窗体的句柄
+    '''
     windows = []
     hwndChild = win32gui.FindWindowEx(hwnd, None, wantedClass, wantedText)
     windows.append(hwndChild)
@@ -304,7 +318,11 @@ def clickButton(hwnd):
 
 
 def click(hwnd):
-    # 鼠标左键点击
+    '''
+    模拟鼠标左键单击
+    :param hwnd: 要单击的控件、窗体句柄
+    :return:
+    '''
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, None, None)
     time.sleep(.2)
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONUP, None, None)
@@ -312,11 +330,22 @@ def click(hwnd):
 
 
 def focusWindow(hwnd):
+    '''
+    捕捉窗口焦点
+    :param hwnd: 窗体句柄
+    :return:
+    '''
     win32gui.ShowWindow(hwnd, win32con.SW_SHOWMAXIMIZED)
     win32gui.SetForegroundWindow(hwnd)
 
 
 def pressKey(hwnd, key_code):
+    '''
+    模拟按键
+    :param hwnd: 窗体句柄
+    :param key_code: 按键码，在win32con下，比如win32con.VK_F1
+    :return:
+    '''
     win32gui.PostMessage(hwnd, win32con.WM_KEYDOWN, key_code, 0)  # 消息键盘
     time.sleep(.2)
     win32gui.PostMessage(hwnd, win32con.WM_KEYUP, key_code, 0)
@@ -360,6 +389,12 @@ def doubleClickStatic(hwnd):
 #     return text
 
 def setEditText(hwnd, text):
+    '''
+    设置Edit控件的文本，这个只能是单行文本
+    :param hwnd: Edit控件句柄
+    :param text: 要设置的文本
+    :return:
+    '''
     win32gui.SendMessage(hwnd, win32con.WM_SETTEXT, None, text)
 
 # def setEditText(hwnd, text, append=False):
